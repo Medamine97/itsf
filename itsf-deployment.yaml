@@ -1,0 +1,58 @@
+# itsf-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: itsf-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: itsf-service
+  template:
+    metadata:
+      labels:
+        app: itsf-service
+    spec:
+      containers:
+      - name: itsf-service
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-content
+          mountPath: /usr/share/nginx/html
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 101
+      volumes:
+      - name: html-content
+        configMap:
+          name: itsf-html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: itsf-html
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>ITSF Service</title>
+    </head>
+    <body>
+        <h1>HELLO ITSF</h1>
+    </body>
+    </html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: itsf-service
+spec:
+  selector:
+    app: itsf-service
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
