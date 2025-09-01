@@ -3,14 +3,14 @@
 ## 1. Créer le cluster Kubernetes local
 
 ```sh
-kind create cluster --name devops-exercise
+kind create cluster --name devops-cluster
 ```
 
 ## 2. Build et charger l'image RISF (non-root, page statique)
 
 ```sh
 docker build -f Dockerfile-risf -t risf-service:latest .
-kind load docker-image risf-service:latest --name devops-exercise
+kind load docker-image risf-service:latest --name devops-cluster
 ```
 
 ## 3. Déployer les microservices
