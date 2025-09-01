@@ -15,6 +15,7 @@ spec:
       containers:
       - name: risf-service
         image: risf-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
         securityContext:
