@@ -1,13 +1,6 @@
 FROM nginx:alpine
 
-# Copy your HTML file
 COPY index-risf.html /usr/share/nginx/html/index.html
-
-# Create nginx user/group
-RUN addgroup -S nginx && adduser -S nginx -G nginx \
-    && chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/run/nginx /etc/nginx/conf.d
-
-USER nginx
 
 EXPOSE 80
 
