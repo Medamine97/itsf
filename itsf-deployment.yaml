@@ -21,14 +21,16 @@ spec:
         volumeMounts:
         - name: html-content
           mountPath: /usr/share/nginx/html
-        securityContext:
-          runAsUser: 101
-          runAsGroup: 101
-          allowPrivilegeEscalation: false
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: nginx.conf
       volumes:
       - name: html-content
         configMap:
           name: itsf-html
+      - name: nginx-config
+        configMap:
+          name: itsf-nginx-conf
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -38,13 +40,25 @@ data:
   index.html: |
     <!DOCTYPE html>
     <html>
-    <head>
-      <title>HELLO ITSF</title>
-    </head>
     <body>
       HELLO ITSF
     </body>
     </html>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: itsf-nginx-conf
+data:
+  nginx.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+        root /usr/share/nginx/html;
+        location / {
+            index index.html;
+        }
+    }
 ---
 apiVersion: v1
 kind: Service
