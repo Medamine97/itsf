@@ -1,12 +1,14 @@
-FROM nginx:latest
+FROM nginx:alpine
 
 # Copy your HTML file
 COPY index-risf.html /usr/share/nginx/html/index.html
 
 # Create nginx user/group
-RUN addgroup --system --gid 101 nginx && \
-    adduser --system --uid 101 --ingroup nginx nginx && \
-    mkdir -p /var/cache/nginx /var/run/nginx && \
-    chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/run/nginx /etc/nginx/conf.d
+RUN addgroup -S nginx && adduser -S nginx -G nginx \
+    && chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/run/nginx /etc/nginx/conf.d
+
+USER nginx
+
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;", "-c", "/etc/nginx/nginx.conf"]
+
+CMD ["nginx", "-g", "daemon off;"]
