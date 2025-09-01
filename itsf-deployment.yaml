@@ -22,8 +22,9 @@ spec:
         - name: html-content
           mountPath: /usr/share/nginx/html
         securityContext:
-          runAsNonRoot: true
           runAsUser: 101
+          runAsGroup: 101
+          allowPrivilegeEscalation: false
       volumes:
       - name: html-content
         configMap:
@@ -38,10 +39,10 @@ data:
     <!DOCTYPE html>
     <html>
     <head>
-        <title>ITSF Service</title>
+      <title>HELLO ITSF</title>
     </head>
     <body>
-        <h1>HELLO ITSF</h1>
+      HELLO ITSF
     </body>
     </html>
 ---
@@ -53,6 +54,6 @@ spec:
   selector:
     app: itsf-service
   ports:
-  - port: 80
+  - protocol: TCP
+    port: 80
     targetPort: 80
-  type: ClusterIP
