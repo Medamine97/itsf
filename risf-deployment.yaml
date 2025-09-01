@@ -15,12 +15,9 @@ spec:
       containers:
       - name: risf-service
         image: risf-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
-        securityContext:
-          runAsUser: 101
-          runAsGroup: 101
-          allowPrivilegeEscalation: false
 ---
 apiVersion: v1
 kind: Service
