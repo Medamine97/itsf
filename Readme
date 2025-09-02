@@ -1,44 +1,47 @@
 # Local Kubernetes Microservices with HTTPS Ingress
 
-## 1. Créer le cluster Kubernetes local
+## 1. Create Local Kubernetes Cluster
 
-```sh
+```bash
+# Create kind cluster
 kind create cluster --name devops-cluster
+
+# Install NGINX ingress controller
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+
+# Wait for ingress controller
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=90s
 ```
 
-## 2. Build et charger l'image RISF (non-root, page statique)
+## 2. Deploy RISF Service (Non-Root)
 
-```sh
+```bash
+# Build and load image
 docker build -f Dockerfile-risf -t risf-service:latest .
 kind load docker-image risf-service:latest --name devops-cluster
+
+# Deploy service
+kubectl apply -f risf-deployment.yaml
 ```
 
-## 3. Déployer les microservices
+## 3. Deploy ITSF Service (Non-Root)
 
-```sh
-kubectl apply -f risf-deployment.yaml
+```bash
+# Create ConfigMap and deploy service
+kubectl apply -f itsf-configmap.yaml
 kubectl apply -f itsf-deployment.yaml
 ```
 
-- **RISF** : Utilise une image custom NGINX avec `index-risf.html` ("HELLO RISF").
-- **ITSF** : Utilise l'image officielle NGINX, le HTML est monté via un ConfigMap (simule un PV local), contenu "HELLO ITSF".
-- Les deux services tournent avec un utilisateur non-root.
-
-## 4. Installer l'Ingress Controller
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=90s
-```
-
-## 5. Générer la PKI et les certificats
+## 4. Generate PKI and TLS Certificates
 
 ```bash
-# Créer le répertoire pour les certificats
-mkdir -p certs-new
-cd certs-new
+# Setup PKI infrastructure
+mkdir -p certs-new && cd certs-new
 
-# Générer la CA root
+# Create Root CA
 openssl genrsa -out ca.key 2048
 openssl req -x509 -new -nodes \
   -key ca.key \
@@ -47,7 +50,7 @@ openssl req -x509 -new -nodes \
   -subj "/CN=Local CA" \
   -addext "basicConstraints=critical,CA:TRUE"
 
-# Générer le certificat RISF
+# Generate RISF certificate
 openssl genrsa -out hello-risf.key 2048
 openssl req -new -x509 \
   -key hello-risf.key \
@@ -62,7 +65,7 @@ openssl req -new -x509 \
   -addext "keyUsage=digitalSignature,keyEncipherment" \
   -addext "extendedKeyUsage=serverAuth"
 
-# Générer le certificat ITSF
+# Generate ITSF certificate
 openssl genrsa -out hello-itsf.key 2048
 openssl req -new -x509 \
   -key hello-itsf.key \
@@ -77,58 +80,37 @@ openssl req -new -x509 \
   -addext "keyUsage=digitalSignature,keyEncipherment" \
   -addext "extendedKeyUsage=serverAuth"
 
-# Vérifier les certificats
-openssl x509 -in hello-risf.crt -text -noout
-openssl x509 -in hello-itsf.crt -text -noout
-openssl verify -CAfile ca.crt hello-risf.crt
-openssl verify -CAfile ca.crt hello-itsf.crt
-```
-
-## 6. Créer les secrets TLS dans Kubernetes
-
-```sh
+# Create Kubernetes secrets
 kubectl create secret tls hello-risf-tls --cert=hello-risf.crt --key=hello-risf.key
 kubectl create secret tls hello-itsf-tls --cert=hello-itsf.crt --key=hello-itsf.key
 ```
 
-## 7. Déployer l'Ingress
+## 5. Configure HTTPS Ingress
 
-```sh
+```bash
+# Apply ingress configuration
 kubectl apply -f ingress.yaml
-```
 
-- L'Ingress expose les deux services sous les noms de domaine `hello-risf.local.domain` et `hello-itsf.local.domain` en HTTPS (certificats signés par la CA).
-- Le trafic est en HTTPS jusqu'à l'Ingress, puis en HTTP jusqu'aux pods NGINX.
-
-## 8. Ajouter les domaines au fichier hosts
-
-```sh
+# Configure local DNS
 echo "127.0.0.1 hello-risf.local.domain hello-itsf.local.domain" | sudo tee -a /etc/hosts
 ```
 
-## 9. Tester l'accès aux pages web
+## 6. Test HTTPS Access
 
-- HTTP (devrait rediriger vers HTTPS)
-- HTTPS (ignorer les certificats auto-signés)
-
-```sh
+```bash
+# Test both services
 curl -k https://hello-risf.local.domain
 curl -k https://hello-itsf.local.domain
 ```
 
-## 10. Vérifier les ressources Kubernetes
+## Verification
 
-```sh
-kubectl get pods
-kubectl get services
-kubectl get ingress
+```bash
+# Check components status
+kubectl get pods,svc,ingress
+kubectl get secrets | grep tls
+
+# Verify certificates
+openssl verify -CAfile certs-new/ca.crt certs-new/hello-risf.crt
+openssl verify -CAfile certs-new/ca.crt certs-new/hello-itsf.crt
 ```
-
----
-
-**Résumé :**
-- Deux microservices NGINX, chacun affiche une page statique différente.
-- RISF : image custom, ITSF : HTML monté via ConfigMap.
-- Les containers ne tournent pas en root.
-- Exposition via Ingress avec certificats TLS signés par une CA locale.
-- Trafic HTTPS jusqu'à Ingress, HTTP vers les pods.
