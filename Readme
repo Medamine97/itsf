@@ -33,9 +33,56 @@ kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.
 
 ## 5. Générer la PKI et les certificats
 
-- Créer une CA root.
-- Générer un certificat TLS pour `hello-risf.local.domain` signé par la CA.
-- Générer un certificat TLS pour `hello-itsf.local.domain` signé par la CA.
+```bash
+# Créer le répertoire pour les certificats
+mkdir -p certs-new
+cd certs-new
+
+# Générer la CA root
+openssl genrsa -out ca.key 2048
+openssl req -x509 -new -nodes \
+  -key ca.key \
+  -sha256 -days 365 \
+  -out ca.crt \
+  -subj "/CN=Local CA" \
+  -addext "basicConstraints=critical,CA:TRUE"
+
+# Générer le certificat RISF
+openssl genrsa -out hello-risf.key 2048
+openssl req -new -x509 \
+  -key hello-risf.key \
+  -CA ca.crt \
+  -CAkey ca.key \
+  -CAcreateserial \
+  -out hello-risf.crt \
+  -days 365 \
+  -sha256 \
+  -subj "/CN=hello-risf.local.domain" \
+  -addext "subjectAltName=DNS:hello-risf.local.domain" \
+  -addext "keyUsage=digitalSignature,keyEncipherment" \
+  -addext "extendedKeyUsage=serverAuth"
+
+# Générer le certificat ITSF
+openssl genrsa -out hello-itsf.key 2048
+openssl req -new -x509 \
+  -key hello-itsf.key \
+  -CA ca.crt \
+  -CAkey ca.key \
+  -CAcreateserial \
+  -out hello-itsf.crt \
+  -days 365 \
+  -sha256 \
+  -subj "/CN=hello-itsf.local.domain" \
+  -addext "subjectAltName=DNS:hello-itsf.local.domain" \
+  -addext "keyUsage=digitalSignature,keyEncipherment" \
+  -addext "extendedKeyUsage=serverAuth"
+
+# Vérifier les certificats
+openssl x509 -in hello-risf.crt -text -noout
+openssl x509 -in hello-itsf.crt -text -noout
+openssl verify -CAfile ca.crt hello-risf.crt
+openssl verify -CAfile ca.crt hello-itsf.crt
+```
 
 ## 6. Créer les secrets TLS dans Kubernetes
 
