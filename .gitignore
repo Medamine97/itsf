@@ -1,0 +1,6 @@
+# Certificates and private keys
+certs-new/*.key
+certs-new/*.crt
+
+# IDE files
+.vscode/
