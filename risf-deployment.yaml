@@ -12,12 +12,31 @@ spec:
       labels:
         app: risf-service
     spec:
+      securityContext:
+        fsGroup: 101
+        runAsNonRoot: true
       containers:
       - name: risf-service
         image: risf-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Never
         ports:
-        - containerPort: 80
+        - containerPort: 8080
+        securityContext:
+          runAsUser: 101
+          runAsGroup: 101
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - name: temp-volume
+          mountPath: /tmp
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+      volumes:
+      - name: temp-volume
+        emptyDir: {}
+      - name: nginx-config
+        configMap:
+          name: nginx-conf
 ---
 apiVersion: v1
 kind: Service
@@ -29,4 +48,4 @@ spec:
   ports:
   - protocol: TCP
     port: 80
-    targetPort: 80
+    targetPort: 8080
